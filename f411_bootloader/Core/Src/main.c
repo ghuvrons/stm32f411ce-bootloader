@@ -28,6 +28,7 @@
 
 /* Private typedef -----------------------------------------------------------*/
 /* USER CODE BEGIN PTD */
+#define APP_ADDR 0x08020000
 
 /* USER CODE END PTD */
 
@@ -49,7 +50,9 @@
 /* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
+
 /* USER CODE BEGIN PFP */
+static void BOOT_Shutdown(void);
 
 /* USER CODE END PFP */
 
@@ -92,13 +95,25 @@ int main(void)
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
+  int i = 0;
   while (1)
   {
-    bepBlink(2, 100, 100);
-    HAL_Delay(1000);
+    /* To do Somethings before go to app */
+    bepBlink(1, 100, 100);
+
+    if ((i++) < 5) continue;
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
+    /* Go To App */
+    uint32_t appStack = *(__IO uint32_t *)(APP_ADDR);
+    void (*jump)(void) = (void (*)(void))(*(__IO uint32_t *)(APP_ADDR + 4));
+
+    BOOT_Shutdown();
+    __set_MSP(appStack);
+    jump();
+
+    while (1);
   }
   /* USER CODE END 3 */
 }
@@ -167,6 +182,24 @@ static void MX_GPIO_Init(void)
 }
 
 /* USER CODE BEGIN 4 */
+static void BOOT_Shutdown(void)
+{
+  /* exec HAL_XXX_MaspDeinit() */
+
+  /* DeInit */
+  HAL_GPIO_DeInit(GPIOC, GPIO_PIN_13);
+  HAL_RCC_DeInit();
+  HAL_DeInit();
+  __disable_irq();
+
+  SysTick->CTRL = 0;
+  SysTick->LOAD = 0;
+  SysTick->VAL = 0;
+
+
+  SYSCFG->MEMRMP = 0x01;
+  __HAL_SYSCFG_REMAPMEMORY_SYSTEMFLASH();
+}
 
 /* USER CODE END 4 */
 

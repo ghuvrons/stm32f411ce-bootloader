@@ -222,6 +222,8 @@ static void MX_GPIO_Init(void)
 void StartDefaultTask(void *argument)
 {
   /* USER CODE BEGIN 5 */
+  bepBlink(1, 3000, 100);
+
   /* Infinite loop */
   for(;;)
   {

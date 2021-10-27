@@ -35,10 +35,5 @@
 			<type>2</type>
 			<locationURI>PARENT-1-PROJECT_LOC/Libs</locationURI>
 		</link>
-		<link>
-			<name>ggg</name>
-			<type>2</type>
-			<locationURI>PARENT-1-PROJECT_LOC/ggg</locationURI>
-		</link>
 	</linkedResources>
 </projectDescription>
