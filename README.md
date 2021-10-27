@@ -22,12 +22,24 @@ This example will partition by 2 part. First 128K Flash mem will be contain boot
     ```c
     /* ..... */
 
+    #define APP_ADDR 0x08020000
     static void BOOT_Shutdown(void);
 
     /* ..... */
 
-    int main(){
-      while(1) {
+    int main(void) {
+      /* ..... */
+
+      /* Infinite loop */
+      /* USER CODE BEGIN WHILE */
+      while (1){
+        /* To do Somethings before go to app */
+        bepBlink(1, 100, 100);
+        
+        /* USER CODE END WHILE */
+
+        /* USER CODE BEGIN 3 */
+        /* Go To App */
         uint32_t appStack = *(__IO uint32_t *)(APP_ADDR);
         void (*jump)(void) = (void (*)(void))(*(__IO uint32_t *)(APP_ADDR + 4));
 
@@ -35,12 +47,18 @@ This example will partition by 2 part. First 128K Flash mem will be contain boot
         __set_MSP(appStack);
         jump();
       }
+      /* USER CODE END 3 */
+
+      /* ..... */
     }
 
     /* ..... */
 
     static void BOOT_Shutdown(void)
     {
+      /* exec HAL_XXX_MaspDeinit() */
+
+      /* DeInit */
       HAL_GPIO_DeInit(GPIOC, GPIO_PIN_13);
       HAL_RCC_DeInit();
       HAL_DeInit();
@@ -75,5 +93,15 @@ This example will partition by 2 part. First 128K Flash mem will be contain boot
 
 1. Set VECT_TAB_OFFSET
     In file "/Core/Src/system_stm32f4xx.c":
-    - Uncomment line 95 : "#define USER_VECT_TAB_ADDRESS"
-    - Define VECT_TAB_OFFSET, in line 109, as Application address offset. in this examample, 0x00020000U
+    - define USER_VECT_TAB_ADDRESS. (Uncomment line 95 for my sourcecode) :
+
+      ```c
+      #define USER_VECT_TAB_ADDRESS
+      ```
+
+    - Define VECT_TAB_OFFSET, (line 109 in my sourcecode), as Application address offset. in this examample, 0x00020000U
+
+      ```c
+      #define VECT_TAB_OFFSET         0x00020000U    /*!< Vector Table base offset field.
+                                                          This value must be a multiple of 0x200. */
+      ```
