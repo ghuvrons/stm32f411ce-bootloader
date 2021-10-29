@@ -23,6 +23,7 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
+#include "firmware.h"
 #include "led_user.h"
 
 /* USER CODE END Includes */
@@ -97,6 +98,8 @@ int main(void)
   MX_GPIO_Init();
   /* USER CODE BEGIN 2 */
 
+  Firmware_SetVersion(&Firmware_Detail, 1, 0, 0);
+  Firmware_SaveDetail(&Firmware_Detail);
   /* USER CODE END 2 */
 
   /* Init scheduler */
