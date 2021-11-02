@@ -7,11 +7,9 @@
 
 #include "firmware.h"
 
-Firmware_Detail_t Firmware_GetDetail()
+void Firmware_LoadDetail(Firmware_Detail_t* detail)
 {
-  Firmware_Detail_t detail = {0};
-  detail = *((Firmware_Detail_t*) FIRMWARE_DETAIL_ADDR);
-  return detail;
+  *detail = *((Firmware_Detail_t*) FIRMWARE_DETAIL_ADDR);
 }
 
 void Firmware_SaveDetail(Firmware_Detail_t* detail)

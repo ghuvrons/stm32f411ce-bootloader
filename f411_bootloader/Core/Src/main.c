@@ -19,16 +19,21 @@
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
+#include "usb_device.h"
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
+#include "firmware.h"
+#include "FOTU.h"
 #include "led_user.h"
+#include "debugger.h"
 
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
 /* USER CODE BEGIN PTD */
 #define APP_ADDR 0x08020000
+#define APP_LENGTH 0x40000
 
 /* USER CODE END PTD */
 
@@ -44,21 +49,53 @@
 /* Private variables ---------------------------------------------------------*/
 
 /* USER CODE BEGIN PV */
-
+FOTU_Handler_t hfotu;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
-
 /* USER CODE BEGIN PFP */
 static void BOOT_Shutdown(void);
+static void onFotuReadyToWrite(void);
+static void onFotuWritingDone(void);
 
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
+void CDC_OnRecieveData(uint8_t* Buf, uint32_t Len)
+{
+  if(hfotu.state == FOTU_STATE_WRITING){
+    FOTU_Write(&hfotu, Buf, Len);
+    return;
+  }
 
+  switch (Buf[0]) {
+  case '!':
+    if(Len >= 9){
+      uint32_t expectLength = *((uint32_t *)&Buf[1]);
+      uint32_t expectCRC = *((uint32_t *)&Buf[5]);
+
+      FOTU_PrepareWrite(&hfotu, expectLength, expectCRC);
+    }
+    break;
+
+  case '@':
+    DBG_Print("Bep");
+  }
+}
+
+static void onFotuReadyToWrite(void)
+{
+  DBG_Print("Ready");
+}
+
+static void onFotuWritingDone(void)
+{
+  printf("CRC Done: %u\r\n", (unsigned int)hfotu.crc);
+  Firmware_Detail.isUpdate = 0;
+}
 /* USER CODE END 0 */
 
 /**
@@ -89,19 +126,37 @@ int main(void)
 
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
+  MX_USB_DEVICE_Init();
   /* USER CODE BEGIN 2 */
+  Firmware_LoadDetail(&Firmware_Detail);
+
+  hfotu.app1.appAddress = APP_ADDR;
+  hfotu.app1.appLength  = APP_LENGTH;
+  hfotu.onReadyToWrite  = onFotuReadyToWrite;
+  hfotu.onWritingDone   = onFotuWritingDone;
 
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
-  int i = 0;
   while (1)
   {
     /* To do Somethings before go to app */
-    bepBlink(1, 100, 100);
+    if(Firmware_Detail.isUpdate == 1){
+      if(hfotu.state == FOTU_STATE_WRITING){
+        bepBlink(1, 100, 100);
+      } else {
+        bepBlink(2, 100, 100);
+        HAL_GPIO_WritePin(GPIOC, GPIO_PIN_13, GPIO_PIN_RESET);
+        HAL_Delay(1300);
+      }
+      continue;
+    }
 
-    if ((i++) < 5) continue;
+
+    HAL_GPIO_WritePin(GPIOC, GPIO_PIN_13, GPIO_PIN_RESET);
+    HAL_Delay(3000);
+
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
@@ -134,10 +189,16 @@ void SystemClock_Config(void)
   /** Initializes the RCC Oscillators according to the specified parameters
   * in the RCC_OscInitTypeDef structure.
   */
-  RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSI;
+  RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSI|RCC_OSCILLATORTYPE_HSE;
+  RCC_OscInitStruct.HSEState = RCC_HSE_ON;
   RCC_OscInitStruct.HSIState = RCC_HSI_ON;
   RCC_OscInitStruct.HSICalibrationValue = RCC_HSICALIBRATION_DEFAULT;
-  RCC_OscInitStruct.PLL.PLLState = RCC_PLL_NONE;
+  RCC_OscInitStruct.PLL.PLLState = RCC_PLL_ON;
+  RCC_OscInitStruct.PLL.PLLSource = RCC_PLLSOURCE_HSE;
+  RCC_OscInitStruct.PLL.PLLM = 15;
+  RCC_OscInitStruct.PLL.PLLN = 144;
+  RCC_OscInitStruct.PLL.PLLP = RCC_PLLP_DIV2;
+  RCC_OscInitStruct.PLL.PLLQ = 5;
   if (HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK)
   {
     Error_Handler();
@@ -168,6 +229,8 @@ static void MX_GPIO_Init(void)
 
   /* GPIO Ports Clock Enable */
   __HAL_RCC_GPIOC_CLK_ENABLE();
+  __HAL_RCC_GPIOH_CLK_ENABLE();
+  __HAL_RCC_GPIOA_CLK_ENABLE();
 
   /*Configure GPIO pin Output Level */
   HAL_GPIO_WritePin(GPIOC, GPIO_PIN_13, GPIO_PIN_SET);
