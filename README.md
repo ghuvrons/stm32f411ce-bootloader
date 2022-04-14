@@ -67,9 +67,9 @@ This example will partition by 2 part. First 128K Flash mem will be contain boot
       SysTick->CTRL = 0;
       SysTick->LOAD = 0;
       SysTick->VAL = 0;
-
-
       SYSCFG->MEMRMP = 0x01;
+      
+      __enable_irq();
       __HAL_SYSCFG_REMAPMEMORY_SYSTEMFLASH();
     }
     
